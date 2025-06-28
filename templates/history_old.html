@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extraction History - Wellfound Job Scraper</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .nav {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .nav a {
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            margin: 0 10px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 25px;
+            transition: all 0.3s ease;
+        }
+
+        .nav a:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        .controls {
+            background: rgba(255,255,255,0.9);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, #00b894, #00a085);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .extractions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .extraction-card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .extraction-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        }
+
+        .extraction-header {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f1f3f4;
+        }
+
+        .extraction-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .extraction-meta {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .extraction-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #666;
+            text-transform: uppercase;
+        }
+
+        .extraction-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .extraction-actions .btn {
+            flex: 1;
+            min-width: 80px;
+            font-size: 0.8rem;
+            padding: 8px 12px;
+        }
+
+        .loading {
+            text-align: center;
+            color: white;
+            font-size: 1.2rem;
+            margin: 50px 0;
+        }
+
+        .no-extractions {
+            text-align: center;
+            color: white;
+            font-size: 1.2rem;
+            margin: 50px 0;
+            background: rgba(255,255,255,0.1);
+            padding: 40px;
+            border-radius: 15px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: black;
+        }
+
+        .job-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .job-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+            gap: 15px;
+        }
+
+        .job-title {
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 5px;
+            flex: 1;
+        }
+
+        .job-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .job-detail-btn, .job-apply-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .job-detail-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .job-detail-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .job-apply-btn {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            color: white;
+        }
+
+        .job-apply-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(72, 187, 120, 0.3);
+        }
+
+        .job-company {
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .job-location {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 3px;
+        }
+
+        .job-type, .job-posted {
+            color: #666;
+            font-size: 0.85rem;
+            margin-bottom: 3px;
+        }
+
+        .expand-section {
+            text-align: center;
+            padding: 20px;
+            background: #f1f3f4;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+
+        .expand-section p {
+            margin-bottom: 10px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .expand-section .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .expand-section .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        /* Job Detail Modal Styles */
+        .job-detail-modal {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .job-detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f1f3f4;
+        }
+
+        .apply-now-btn {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .apply-now-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(72, 187, 120, 0.3);
+        }
+
+        .job-detail-grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .job-basic-info, .company-info, .job-description {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .job-basic-info h3, .company-info h3, .job-description h3 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 1.1rem;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+        }
+
+        .info-item {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 3px solid #667eea;
+        }
+
+        .company-desc {
+            margin-bottom: 15px;
+            line-height: 1.6;
+            color: #555;
+        }
+
+        .company-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .tag {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .company-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .company-link:hover {
+            text-decoration: underline;
+        }
+
+        .desc-section {
+            margin-bottom: 20px;
+        }
+
+        .desc-section h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1rem;
+            text-transform: capitalize;
+        }
+
+        .desc-section p, .desc-full {
+            line-height: 1.6;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .job-detail-footer {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .job-detail-footer small {
+            color: #666;
+            font-size: 0.8rem;
+        }
+
+        .job-detail-footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .job-detail-footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .extractions-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .extraction-actions {
+                flex-direction: column;
+            }
+
+            .job-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .job-actions {
+                align-self: flex-end;
+            }
+
+            .job-detail-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .job-detail-footer {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Extraction History</h1>
+            <p>Manage and view your previous job extractions</p>
+        </div>
+
+        <div class="nav">
+            <a href="/">🏠 Home</a>
+            <a href="/history">📊 History</a>
+        </div>
+
+        <div class="controls">
+            <div>
+                <span style="font-weight: 600;">Total Extractions: <span id="totalCount">0</span></span>
+            </div>
+            <div>
+                <button class="btn btn-success" onclick="refreshExtractions()">🔄 Refresh</button>
+                <button class="btn btn-danger" onclick="cleanupOldExtractions()">🗑️ Cleanup Old</button>
+            </div>
+        </div>
+
+        <div id="loading" class="loading">
+            Loading extractions...
+        </div>
+
+        <div id="noExtractions" class="no-extractions" style="display: none;">
+            <h3>📭 No Extractions Found</h3>
+            <p>You haven't run any extractions yet. <a href="/" style="color: white; text-decoration: underline;">Start your first extraction</a></p>
+        </div>
+
+        <div id="extractionsGrid" class="extractions-grid">
+            <!-- Extraction cards will be populated here -->
+        </div>
+    </div>
+
+    <!-- Job Details Modal -->
+    <div id="jobModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2 id="modalTitle">Extraction Results</h2>
+            <div id="modalContent">
+                <!-- Job details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let extractions = [];
+
+        async function loadExtractions() {
+            try {
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('extractionsGrid').style.display = 'none';
+                document.getElementById('noExtractions').style.display = 'none';
+
+                const response = await fetch('/extractions');
+                const data = await response.json();
+                
+                extractions = data;
+                document.getElementById('totalCount').textContent = extractions.length;
+                
+                document.getElementById('loading').style.display = 'none';
+                
+                if (extractions.length === 0) {
+                    document.getElementById('noExtractions').style.display = 'block';
+                } else {
+                    document.getElementById('extractionsGrid').style.display = 'grid';
+                    renderExtractions();
+                }
+            } catch (error) {
+                console.error('Error loading extractions:', error);
+                document.getElementById('loading').textContent = 'Error loading extractions';
+            }
+        }
+
+        function renderExtractions() {
+            const grid = document.getElementById('extractionsGrid');
+            grid.innerHTML = '';
+
+            extractions.forEach(extraction => {
+                const card = createExtractionCard(extraction);
+                grid.appendChild(card);
+            });
+        }
+
+        function createExtractionCard(extraction) {
+            const card = document.createElement('div');
+            card.className = 'extraction-card';
+            
+            const createdDate = new Date(extraction.created_date).toLocaleString();
+            
+            card.innerHTML = `
+                <div class="extraction-header">
+                    <div class="extraction-title">${extraction.keyword} - ${extraction.location}</div>
+                    <div class="extraction-meta">Created: ${createdDate}</div>
+                </div>
+                
+                <div class="extraction-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">${extraction.job_count}</div>
+                        <div class="stat-label">Jobs</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${extraction.size_mb.toFixed(1)}</div>
+                        <div class="stat-label">MB</div>
+                    </div>
+                </div>
+                
+                <div class="extraction-actions">
+                    <button class="btn btn-primary" onclick="viewExtraction('${extraction.id}')">📋 View</button>
+                    <button class="btn btn-success" onclick="downloadExtraction('${extraction.id}', 'json')">⬇️ JSON</button>
+                    <button class="btn btn-success" onclick="downloadExtraction('${extraction.id}', 'csv')">⬇️ CSV</button>
+                    <button class="btn btn-danger" onclick="deleteExtraction('${extraction.id}')">🗑️ Delete</button>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        async function viewExtraction(extractionId) {
+            try {
+                const response = await fetch(`/extractions/${extractionId}/results`);
+                const data = await response.json();
+                
+                document.getElementById('modalTitle').textContent = `Results: ${extractionId}`;
+                
+                let content = '';
+                data.files.forEach((file, fileIndex) => {
+                    if (file.data && Array.isArray(file.data)) {
+                        content += `<h3>${file.filename} (${file.size} jobs)</h3>`;
+                        
+                        // Show first 20 jobs initially
+                        const initialLimit = 20;
+                        const showAll = file.data.length <= initialLimit;
+                        
+                        file.data.slice(0, showAll ? file.data.length : initialLimit).forEach((job, jobIndex) => {
+                            // Handle different data structures for company
+                            let companyName = 'Unknown Company';
+                            if (job.company) {
+                                if (typeof job.company === 'string') {
+                                    companyName = job.company;
+                                } else if (typeof job.company === 'object' && job.company.name) {
+                                    companyName = job.company.name;
+                                }
+                            } else if (job.company_name) {
+                                companyName = job.company_name;
+                            }
+                            
+                            const jobId = `${fileIndex}-${jobIndex}`;
+                            const hasDetailedData = job.description || job.apply_link || job.employment_type;
+                            
+                            content += `
+                                <div class="job-card">
+                                    <div class="job-header">
+                                        <div class="job-title">${job.job_title || job.title || 'Unknown Title'}</div>
+                                        <div class="job-actions">
+                                            ${hasDetailedData ? `<button class="job-detail-btn" onclick="viewJobDetails('${extractionId}', '${jobId}', ${JSON.stringify(job).replace(/"/g, '&quot;')})">👁️ View Details</button>` : ''}
+                                            ${job.apply_link || job.source_url || job.link ? `<a href="${job.apply_link || job.source_url || job.link}" target="_blank" class="job-apply-btn">🔗 Apply</a>` : ''}
+                                        </div>
+                                    </div>
+                                    <div class="job-company">${companyName}</div>
+                                    <div class="job-location">${job.location || 'Unknown Location'}</div>
+                                    ${job.employment_type ? `<div class="job-type">💼 ${job.employment_type}</div>` : ''}
+                                    ${job.posted_date ? `<div class="job-posted">📅 ${job.posted_date}</div>` : ''}
+                                </div>
+                            `;
+                        });
+                        
+                        if (!showAll) {
+                            content += `
+                                <div class="expand-section" id="expand-${fileIndex}">
+                                    <p><em>Showing ${initialLimit} of ${file.data.length} jobs</em></p>
+                                    <button class="btn btn-primary" onclick="showAllJobs('${extractionId}', ${fileIndex}, this)">
+                                        📋 Show All ${file.data.length} Jobs
+                                    </button>
+                                </div>
+                                <div class="hidden-jobs" id="hidden-${fileIndex}" style="display: none;">
+                                    ${file.data.slice(initialLimit).map((job, jobIndex) => {
+                                        let companyName = 'Unknown Company';
+                                        if (job.company) {
+                                            if (typeof job.company === 'string') {
+                                                companyName = job.company;
+                                            } else if (typeof job.company === 'object' && job.company.name) {
+                                                companyName = job.company.name;
+                                            }
+                                        } else if (job.company_name) {
+                                            companyName = job.company_name;
+                                        }
+                                        
+                                        const jobId = `${fileIndex}-${initialLimit + jobIndex}`;
+                                        const hasDetailedData = job.description || job.apply_link || job.employment_type;
+                                        
+                                        return `
+                                            <div class="job-card">
+                                                <div class="job-header">
+                                                    <div class="job-title">${job.job_title || job.title || 'Unknown Title'}</div>
+                                                    <div class="job-actions">
+                                                        ${hasDetailedData ? `<button class="job-detail-btn" onclick="viewJobDetails('${extractionId}', '${jobId}', ${JSON.stringify(job).replace(/"/g, '&quot;')})">👁️ View Details</button>` : ''}
+                                                        ${job.apply_link || job.source_url || job.link ? `<a href="${job.apply_link || job.source_url || job.link}" target="_blank" class="job-apply-btn">🔗 Apply</a>` : ''}
+                                                    </div>
+                                                </div>
+                                                <div class="job-company">${companyName}</div>
+                                                <div class="job-location">${job.location || 'Unknown Location'}</div>
+                                                ${job.employment_type ? `<div class="job-type">💼 ${job.employment_type}</div>` : ''}
+                                                ${job.posted_date ? `<div class="job-posted">📅 ${job.posted_date}</div>` : ''}
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            `;
+                        }
+                    }
+                });
+                
+                document.getElementById('modalContent').innerHTML = content;
+                document.getElementById('jobModal').style.display = 'block';
+            } catch (error) {
+                alert('Error loading extraction details: ' + error.message);
+            }
+        }
+
+        function showAllJobs(extractionId, fileIndex, button) {
+            const hiddenJobs = document.getElementById(`hidden-${fileIndex}`);
+            const expandSection = document.getElementById(`expand-${fileIndex}`);
+            
+            if (hiddenJobs && expandSection) {
+                hiddenJobs.style.display = 'block';
+                expandSection.style.display = 'none';
+            }
+        }
+
+        function viewJobDetails(extractionId, jobId, jobData) {
+            try {
+                // Parse the job data (it comes as a string from the onclick attribute)
+                const job = typeof jobData === 'string' ? JSON.parse(jobData) : jobData;
+                
+                // Create detailed job modal content
+                let detailContent = `
+                    <div class="job-detail-modal">
+                        <div class="job-detail-header">
+                            <h2>${job.job_title || job.title || 'Job Details'}</h2>
+                            ${job.apply_link || job.source_url || job.link ? 
+                                `<a href="${job.apply_link || job.source_url || job.link}" target="_blank" class="apply-now-btn">🚀 Apply Now</a>` : ''}
+                        </div>
+                        
+                        <div class="job-detail-grid">
+                            <div class="job-basic-info">
+                                <h3>📋 Basic Information</h3>
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <strong>Company:</strong> 
+                                        ${job.company?.name || job.company || job.company_name || 'Unknown'}
+                                    </div>
+                                    <div class="info-item">
+                                        <strong>Location:</strong> ${job.location || 'Not specified'}
+                                    </div>
+                                    <div class="info-item">
+                                        <strong>Employment Type:</strong> ${job.employment_type || job.type || 'Not specified'}
+                                    </div>
+                                    <div class="info-item">
+                                        <strong>Posted:</strong> ${job.posted_date || 'Not specified'}
+                                    </div>
+                                    ${job.visa_sponsorship ? `
+                                        <div class="info-item">
+                                            <strong>Visa Sponsorship:</strong> ${job.visa_sponsorship}
+                                        </div>
+                                    ` : ''}
+                                    ${job.relocation ? `
+                                        <div class="info-item">
+                                            <strong>Relocation:</strong> ${job.relocation}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                `;
+
+                // Add company details if available
+                if (job.company && typeof job.company === 'object') {
+                    detailContent += `
+                        <div class="company-info">
+                            <h3>🏢 Company Details</h3>
+                            ${job.company.description ? `<p class="company-desc">${job.company.description}</p>` : ''}
+                            ${job.company.tags && job.company.tags.length > 0 ? `
+                                <div class="company-tags">
+                                    ${job.company.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                                </div>
+                            ` : ''}
+                            ${job.company.link ? `
+                                <a href="${job.company.link}" target="_blank" class="company-link">🔗 View Company Profile</a>
+                            ` : ''}
+                        </div>
+                    `;
+                }
+
+                // Add job description if available
+                if (job.description) {
+                    detailContent += `
+                        <div class="job-description">
+                            <h3>📝 Job Description</h3>
+                    `;
+                    
+                    if (job.description.sections) {
+                        // Structured description with sections
+                        Object.entries(job.description.sections).forEach(([sectionName, content]) => {
+                            if (content && content.length > 0) {
+                                detailContent += `
+                                    <div class="desc-section">
+                                        <h4>${sectionName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
+                                        ${Array.isArray(content) ? 
+                                            content.map(item => `<p>${item}</p>`).join('') : 
+                                            `<p>${content}</p>`
+                                        }
+                                    </div>
+                                `;
+                            }
+                        });
+                    } else if (job.description.full_text) {
+                        // Full text description
+                        detailContent += `<div class="desc-full">${job.description.full_text.replace(/\n/g, '<br>')}</div>`;
+                    } else if (typeof job.description === 'string') {
+                        // Simple string description
+                        detailContent += `<div class="desc-full">${job.description.replace(/\n/g, '<br>')}</div>`;
+                    }
+                    
+                    detailContent += '</div>';
+                }
+
+                detailContent += `
+                        </div>
+                        <div class="job-detail-footer">
+                            <small>Extracted at: ${job.extracted_at ? new Date(job.extracted_at).toLocaleString() : 'Unknown'}</small>
+                            ${job.source_url ? `<small>Source: <a href="${job.source_url}" target="_blank">${job.source_url}</a></small>` : ''}
+                        </div>
+                    </div>
+                `;
+
+                // Create and show the job details modal
+                document.getElementById('modalTitle').textContent = `Job Details - ${job.job_title || job.title || 'Unknown Position'}`;
+                document.getElementById('modalContent').innerHTML = detailContent;
+                document.getElementById('jobModal').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error viewing job details:', error);
+                alert('Error loading job details: ' + error.message);
+            }
+        }
+
+        async function downloadExtraction(extractionId, format) {
+            try {
+                const response = await fetch(`/extractions/${extractionId}/export/${format}`);
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${extractionId}.${format}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                } else {
+                    throw new Error('Download failed');
+                }
+            } catch (error) {
+                alert('Error downloading extraction: ' + error.message);
+            }
+        }
+
+        async function deleteExtraction(extractionId) {
+            if (confirm(`Are you sure you want to delete extraction "${extractionId}"? This action cannot be undone.`)) {
+                try {
+                    const response = await fetch(`/extractions/${extractionId}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        alert('Extraction deleted successfully');
+                        loadExtractions(); // Refresh the list
+                    } else {
+                        throw new Error('Delete failed');
+                    }
+                } catch (error) {
+                    alert('Error deleting extraction: ' + error.message);
+                }
+            }
+        }
+
+        async function cleanupOldExtractions() {
+            if (confirm('This will delete all extractions older than 7 days. Are you sure?')) {
+                try {
+                    const response = await fetch('/cleanup');
+                    const data = await response.json();
+                    
+                    alert(data.message);
+                    loadExtractions(); // Refresh the list
+                } catch (error) {
+                    alert('Error during cleanup: ' + error.message);
+                }
+            }
+        }
+
+        function refreshExtractions() {
+            loadExtractions();
+        }
+
+        function closeModal() {
+            document.getElementById('jobModal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('jobModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // Load extractions when page loads
+        window.onload = loadExtractions;
+    </script>
+</body>
+</html>

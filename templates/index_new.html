@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WellScraper - Modern Job Data Mining</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/theme.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family-primary);
+            background: var(--primary-bg);
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(0, 212, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(0, 153, 204, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(0, 212, 255, 0.05) 0%, transparent 50%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--secondary-bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary-accent);
+            border-radius: var(--radius-full);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--secondary-accent);
+        }
+
+        /* Page Container */
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: var(--spacing-lg);
+        }
+
+        /* Header Section */
+        .header {
+            text-align: center;
+            margin-bottom: var(--spacing-2xl);
+            position: relative;
+        }
+
+        .logo-container {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+            padding: var(--spacing-lg) var(--spacing-xl);
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-lg);
+            animation: logoFloat 6s ease-in-out infinite;
+        }
+
+        @keyframes logoFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .logo-svg {
+            width: 120px;
+            height: 40px;
+        }
+
+        .header h1 {
+            font-size: var(--font-size-4xl);
+            font-weight: var(--font-weight-bold);
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: var(--spacing-sm);
+            animation: textGlow 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes textGlow {
+            from { filter: drop-shadow(0 0 5px rgba(0, 212, 255, 0.5)); }
+            to { filter: drop-shadow(0 0 20px rgba(0, 212, 255, 0.8)); }
+        }
+
+        .header p {
+            font-size: var(--font-size-lg);
+            color: var(--text-secondary);
+            font-weight: var(--font-weight-normal);
+        }
+
+        /* Navigation */
+        .nav {
+            display: flex;
+            justify-content: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .nav-link {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            color: var(--text-primary);
+            text-decoration: none;
+            padding: var(--spacing-md) var(--spacing-lg);
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-full);
+            font-weight: var(--font-weight-medium);
+            transition: all var(--transition-base);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-link::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: var(--gradient-primary);
+            transition: left var(--transition-base);
+            z-index: -1;
+        }
+
+        .nav-link:hover::before {
+            left: 0;
+        }
+
+        .nav-link:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-glow);
+            color: var(--text-primary);
+        }
+
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Main Content Grid */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: var(--spacing-2xl);
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        /* Control Panel */
+        .control-panel {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-2xl);
+            box-shadow: var(--shadow-xl);
+            height: fit-content;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .control-panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: var(--gradient-primary);
+        }
+
+        .control-panel h2 {
+            margin-bottom: var(--spacing-xl);
+            font-size: var(--font-size-2xl);
+            font-weight: var(--font-weight-semibold);
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+
+        .form-group {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: var(--spacing-sm);
+            font-weight: var(--font-weight-medium);
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: var(--spacing-md);
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-base);
+            color: var(--text-primary);
+            transition: all var(--transition-base);
+            backdrop-filter: blur(10px);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-accent);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .form-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* Animated Submit Button */
+        .submit-btn {
+            width: 100%;
+            padding: var(--spacing-lg);
+            background: var(--gradient-primary);
+            color: var(--text-primary);
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-base);
+            font-weight: var(--font-weight-semibold);
+            cursor: pointer;
+            transition: all var(--transition-base);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-sm);
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Visualization Panel */
+        .visualization-panel {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-2xl);
+            box-shadow: var(--shadow-xl);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .visualization-panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: var(--gradient-primary);
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .panel-title {
+            font-size: var(--font-size-2xl);
+            font-weight: var(--font-weight-semibold);
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .stat-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-md);
+            text-align: center;
+            transition: all var(--transition-base);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--gradient-primary);
+            transform: translateX(-100%);
+            transition: transform var(--transition-slow);
+        }
+
+        .stat-card:hover::before {
+            transform: translateX(0);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .stat-value {
+            font-size: var(--font-size-3xl);
+            font-weight: var(--font-weight-bold);
+            color: var(--primary-accent);
+            margin-bottom: var(--spacing-xs);
+            font-family: var(--font-family-mono);
+        }
+
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            font-weight: var(--font-weight-medium);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Progress Section */
+        .progress-section {
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .progress-title {
+            font-size: var(--font-size-lg);
+            font-weight: var(--font-weight-semibold);
+            color: var(--text-primary);
+        }
+
+        .progress-percentage {
+            font-size: var(--font-size-lg);
+            font-weight: var(--font-weight-bold);
+            color: var(--primary-accent);
+            font-family: var(--font-family-mono);
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background: var(--secondary-bg);
+            border-radius: var(--radius-full);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--gradient-primary);
+            border-radius: var(--radius-full);
+            width: 0%;
+            transition: width var(--transition-base);
+            position: relative;
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.3),
+                transparent
+            );
+            animation: progressShimmer 2s infinite;
+        }
+
+        @keyframes progressShimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* Current Job Card */
+        .current-job-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-left: 4px solid var(--primary-accent);
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--spacing-lg);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        .current-job-title {
+            font-size: var(--font-size-base);
+            font-weight: var(--font-weight-semibold);
+            color: var(--primary-accent);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .current-job-text {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+
+        /* Status Log */
+        .status-log {
+            background: var(--secondary-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-lg);
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: var(--font-family-mono);
+            font-size: var(--font-size-sm);
+        }
+
+        .log-entry {
+            padding: var(--spacing-sm) 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            animation: slideInLeft 0.3s ease-out;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .log-entry.info { color: var(--primary-accent); }
+        .log-entry.success { color: var(--success-color); }
+        .log-entry.error { color: var(--error-color); }
+        .log-entry.warning { color: var(--warning-color); }
+
+        /* Chart Container */
+        .chart-container {
+            height: 300px;
+            margin: var(--spacing-lg) 0;
+            position: relative;
+        }
+
+        /* Results Section */
+        .results-section {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-2xl);
+            box-shadow: var(--shadow-xl);
+            margin-top: var(--spacing-2xl);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .results-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: var(--gradient-primary);
+        }
+
+        .results-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .results-title {
+            font-size: var(--font-size-2xl);
+            font-weight: var(--font-weight-semibold);
+            color: var(--text-primary);
+        }
+
+        /* Job Cards */
+        .job-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            transition: all var(--transition-base);
+            position: relative;
+            overflow: hidden;
+            animation: slideInUp 0.5s ease-out;
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .job-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--gradient-primary);
+        }
+
+        .job-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary-accent);
+        }
+
+        .job-title {
+            font-size: var(--font-size-xl);
+            font-weight: var(--font-weight-semibold);
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .job-company {
+            color: var(--primary-accent);
+            font-weight: var(--font-weight-medium);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .job-details {
+            display: flex;
+            gap: var(--spacing-lg);
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+            flex-wrap: wrap;
+        }
+
+        .job-detail-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+
+        /* Utility Classes */
+        .hidden {
+            display: none !important;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: var(--spacing-xl);
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: var(--spacing-md);
+            }
+            
+            .header h1 {
+                font-size: var(--font-size-3xl);
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .nav {
+                flex-direction: column;
+                gap: var(--spacing-sm);
+            }
+            
+            .job-details {
+                flex-direction: column;
+                gap: var(--spacing-sm);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .logo-container {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .panel-header {
+                flex-direction: column;
+                gap: var(--spacing-md);
+                text-align: center;
+            }
+        }
+
+        /* Loading States */
+        .loading-skeleton {
+            background: linear-gradient(
+                90deg,
+                var(--glass-bg) 25%,
+                rgba(255, 255, 255, 0.1) 50%,
+                var(--glass-bg) 75%
+            );
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo-container">
+                <svg class="logo-svg" viewBox="0 0 120 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#00D4FF;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#0099CC;stop-opacity:1" />
+                        </linearGradient>
+                        <filter id="glow">
+                            <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                            <feMerge> 
+                                <feMergeNode in="coloredBlur"/>
+                                <feMergeNode in="SourceGraphic"/>
+                            </feMerge>
+                        </filter>
+                    </defs>
+                    
+                    <!-- Icon Section -->
+                    <g filter="url(#glow)">
+                        <!-- Well/Database Symbol -->
+                        <circle cx="20" cy="20" r="12" fill="none" stroke="url(#logoGradient)" stroke-width="2"/>
+                        <circle cx="20" cy="20" r="8" fill="none" stroke="url(#logoGradient)" stroke-width="1.5" opacity="0.6"/>
+                        <circle cx="20" cy="20" r="4" fill="url(#logoGradient)" opacity="0.8"/>
+                        
+                        <!-- Data Mining Dots -->
+                        <circle cx="20" cy="12" r="1" fill="#00D4FF" opacity="0.8">
+                            <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite"/>
+                        </circle>
+                        <circle cx="25" cy="16" r="1" fill="#00D4FF" opacity="0.6">
+                            <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" begin="0.5s" repeatCount="indefinite"/>
+                        </circle>
+                        <circle cx="15" cy="16" r="1" fill="#00D4FF" opacity="0.6">
+                            <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" begin="1s" repeatCount="indefinite"/>
+                        </circle>
+                        <circle cx="20" cy="28" r="1" fill="#00D4FF" opacity="0.8">
+                            <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" begin="1.5s" repeatCount="indefinite"/>
+                        </circle>
+                    </g>
+                    
+                    <!-- Text Section -->
+                    <text x="45" y="18" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="14" font-weight="700" fill="url(#logoGradient)">Well</text>
+                    <text x="45" y="32" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="14" font-weight="300" fill="#00D4FF" opacity="0.9">Scraper</text>
+                </svg>
+            </div>
+            <h1>Modern Job Data Mining</h1>
+            <p>Extract and analyze job postings with real-time visualization</p>
+        </div>
+
+        <div class="nav">
+            <a href="/" class="nav-link">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+                    <path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Search
+            </a>
+            <a href="/history" class="nav-link">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M3 3v5h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 7v5l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                History
+            </a>
+        </div>
+
+        <div class="main-content">
+            <div class="control-panel">
+                <h2>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    Job Search Parameters
+                </h2>
+                <form id="extractionForm">
+                    <div class="form-group">
+                        <label for="keyword">Job Title/Keyword</label>
+                        <input type="text" id="keyword" name="keyword" class="form-input" 
+                               placeholder="e.g., Software Engineer, Data Scientist" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="location">Location</label>
+                        <input type="text" id="location" name="location" class="form-input" 
+                               placeholder="e.g., Remote, San Francisco, New York" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="maxJobs">Maximum Jobs (Optional)</label>
+                        <input type="number" id="maxJobs" name="maxJobs" class="form-input" 
+                               placeholder="Leave empty for all jobs" min="1" max="100">
+                    </div>
+                    
+                    <button type="submit" id="startBtn" class="submit-btn">
+                        <span id="btnText">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/>
+                                <path d="m21 21-4.35-4.35"/>
+                            </svg>
+                            Start Extraction
+                        </span>
+                        <div id="btnSpinner" class="btn-spinner hidden"></div>
+                    </button>
+                </form>
+            </div>
+
+            <div class="visualization-panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 3v5h5"/>
+                            <path d="M6 17l4-4 4 4 4-4"/>
+                            <path d="M21 21v-5h-5"/>
+                        </svg>
+                        Real-time Analytics
+                    </h2>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalJobs">0</div>
+                        <div class="stat-label">Total Jobs</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="completedJobs">0</div>
+                        <div class="stat-label">Completed</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="errorCount">0</div>
+                        <div class="stat-label">Errors</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="progressPercent">0%</div>
+                        <div class="stat-label">Progress</div>
+                    </div>
+                </div>
+
+                <div class="progress-section">
+                    <div class="progress-header">
+                        <span class="progress-title">Extraction Progress</span>
+                        <span class="progress-percentage" id="progressPercentText">0%</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" id="progressFill"></div>
+                    </div>
+                </div>
+
+                <div id="currentJob" class="current-job-card hidden">
+                    <div class="current-job-title">Currently Processing</div>
+                    <div class="current-job-text" id="currentJobText">Waiting to start...</div>
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="progressChart"></canvas>
+                </div>
+
+                <div class="status-log">
+                    <div id="logEntries">
+                        <div class="log-entry info">Ready to start job extraction...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="results-section" id="resultsSection">
+            <div class="results-header">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14,2 14,8 20,8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                    <polyline points="10,9 9,9 8,9"/>
+                </svg>
+                <h2 class="results-title">Extracted Jobs</h2>
+            </div>
+            <div id="extractedJobs"></div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let progressChart;
+        let extractionData = {
+            completed: [],
+            errors: [],
+            timeLabels: []
+        };
+        let currentExtractionId = null;
+        let monitoringInterval = null;
+        let lastJobCount = 0;
+
+        // Initialize chart
+        function initChart() {
+            const ctx = document.getElementById('progressChart').getContext('2d');
+            progressChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Completed Jobs',
+                        data: [],
+                        borderColor: '#00D4FF',
+                        backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: 'Errors',
+                        data: [],
+                        borderColor: '#FF6B6B',
+                        backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#FFFFFF'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#A0AEC0'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: '#A0AEC0'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Real-time file monitoring
+        function startFileMonitoring(extractionId) {
+            if (monitoringInterval) {
+                clearInterval(monitoringInterval);
+            }
+            
+            currentExtractionId = extractionId;
+            
+            monitoringInterval = setInterval(async () => {
+                try {
+                    // Get progress data
+                    const progressResponse = await fetch(`/extraction_progress/${extractionId}`);
+                    if (progressResponse.ok) {
+                        const progressData = await progressResponse.json();
+                        updateProgressFromFile(progressData);
+                    }
+                    
+                    // Get jobs data
+                    const jobsResponse = await fetch(`/extraction_jobs/${extractionId}`);
+                    if (jobsResponse.ok) {
+                        const jobsData = await jobsResponse.json();
+                        updateJobsFromFile(jobsData);
+                    }
+                } catch (error) {
+                    console.error('Monitoring error:', error);
+                }
+            }, 1000); // Poll every second
+        }
+        
+        function stopFileMonitoring() {
+            if (monitoringInterval) {
+                clearInterval(monitoringInterval);
+                monitoringInterval = null;
+            }
+            currentExtractionId = null;
+        }
+        
+        function updateProgressFromFile(progressData) {
+            // Update progress stats
+            document.getElementById('totalJobs').textContent = progressData.total_jobs || 0;
+            document.getElementById('completedJobs').textContent = progressData.completed_jobs || 0;
+            document.getElementById('errorCount').textContent = progressData.errors || 0;
+            document.getElementById('progressPercent').textContent = Math.round(progressData.progress_percentage || 0) + '%';
+            document.getElementById('progressPercentText').textContent = Math.round(progressData.progress_percentage || 0) + '%';
+            document.getElementById('progressFill').style.width = (progressData.progress_percentage || 0) + '%';
+            
+            // Update current job if extracting
+            if (progressData.status === 'extracting_details' && progressData.current_job) {
+                document.getElementById('currentJobText').textContent = progressData.current_job;
+            } else if (progressData.status === 'completed') {
+                document.getElementById('currentJobText').textContent = 'Extraction completed!';
+                stopFileMonitoring();
+            }
+        }
+        
+        function updateJobsFromFile(jobsData) {
+            if (!jobsData || !jobsData.jobs) return;
+            
+            const jobs = jobsData.jobs;
+            const currentJobCount = jobs.length;
+            
+            // Only add new jobs to avoid duplicates
+            if (currentJobCount > lastJobCount) {
+                for (let i = lastJobCount; i < currentJobCount; i++) {
+                    addJobCard(jobs[i], i + 1);
+                }
+                lastJobCount = currentJobCount;
+            }
+        }
+
+        // Update chart
+        function updateChart() {
+            const now = new Date().toLocaleTimeString();
+            progressChart.data.labels.push(now);
+            progressChart.data.datasets[0].data.push(parseInt(document.getElementById('completedJobs').textContent));
+            progressChart.data.datasets[1].data.push(parseInt(document.getElementById('errorCount').textContent));
+            
+            // Keep only last 20 data points
+            if (progressChart.data.labels.length > 20) {
+                progressChart.data.labels.shift();
+                progressChart.data.datasets[0].data.shift();
+                progressChart.data.datasets[1].data.shift();
+            }
+            
+            progressChart.update();
+        }
+
+        // Add log entry
+        function addLogEntry(message, type = 'info') {
+            const logEntries = document.getElementById('logEntries');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logEntries.appendChild(entry);
+            logEntries.scrollTop = logEntries.scrollHeight;
+        }
+
+        // Add extracted job card
+        function addJobCard(job, index) {
+            const jobsContainer = document.getElementById('extractedJobs');
+            const jobCard = document.createElement('div');
+            jobCard.className = 'job-card fade-in';
+            
+            // Handle both detailed job structure and search results structure
+            let company = 'Unknown Company';
+            if (job.company_name) {
+                company = job.company_name;
+            } else if (job.company) {
+                if (typeof job.company === 'object' && job.company.name) {
+                    company = job.company.name;
+                } else if (typeof job.company === 'string') {
+                    company = job.company;
+                }
+            } else if (job.search_info?.company) {
+                company = job.search_info.company;
+            }
+            
+            const title = job.job_title || job.title || job.search_info?.title || 'Unknown Position';
+            const location = job.location || job.search_info?.location || 'Unknown Location';
+            const employmentType = job.job_type || job.employment_type || job.search_info?.type || 'Unknown Type';
+            const salary = job.salary_range || job.salary || 'Not specified';
+            const experience = job.experience_level || job.experience || 'Not specified';
+            
+            jobCard.innerHTML = `
+                <div class="job-title">${title}</div>
+                <div class="job-company">${company}</div>
+                <div class="job-details">
+                    <div class="job-detail-item">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                            <circle cx="12" cy="10" r="3"/>
+                        </svg>
+                        ${location}
+                    </div>
+                    <div class="job-detail-item">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                            <line x1="8" y1="21" x2="16" y2="21"/>
+                            <line x1="12" y1="17" x2="12" y2="21"/>
+                        </svg>
+                        ${employmentType}
+                    </div>
+                    <div class="job-detail-item">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="1" x2="12" y2="23"/>
+                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                        </svg>
+                        ${salary}
+                    </div>
+                </div>
+            `;
+            
+            jobsContainer.appendChild(jobCard);
+            
+            // Scroll to bottom to show latest job
+            jobsContainer.scrollTop = jobsContainer.scrollHeight;
+        }
+
+        // Form submission
+        document.getElementById('extractionForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const keyword = document.getElementById('keyword').value;
+            const location = document.getElementById('location').value;
+            const maxJobs = document.getElementById('maxJobs').value || null;
+            
+            // Reset UI
+            document.getElementById('extractedJobs').innerHTML = '';
+            document.getElementById('totalJobs').textContent = '0';
+            document.getElementById('completedJobs').textContent = '0';
+            document.getElementById('errorCount').textContent = '0';
+            document.getElementById('progressPercent').textContent = '0%';
+            document.getElementById('progressPercentText').textContent = '0%';
+            document.getElementById('progressFill').style.width = '0%';
+            lastJobCount = 0;
+            
+            // Stop any existing monitoring
+            stopFileMonitoring();
+            
+            // Update button state
+            document.getElementById('btnText').classList.add('hidden');
+            document.getElementById('btnSpinner').classList.remove('hidden');
+            document.getElementById('startBtn').disabled = true;
+            
+            // Start extraction
+            fetch('/start_extraction', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    keyword: keyword,
+                    location: location,
+                    max_jobs: maxJobs ? parseInt(maxJobs) : null
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                addLogEntry(`Extraction started: ${data.message}`, 'success');
+                if (data.extraction_id) {
+                    startFileMonitoring(data.extraction_id);
+                }
+            })
+            .catch(error => {
+                addLogEntry(`Error starting extraction: ${error.message}`, 'error');
+                document.getElementById('btnText').classList.remove('hidden');
+                document.getElementById('btnSpinner').classList.add('hidden');
+                document.getElementById('startBtn').disabled = false;
+            });
+        });
+
+        // Socket event handlers
+        socket.on('status_update', function(data) {
+            console.log('Status update:', data);
+            addLogEntry(data.message, data.type === 'error' ? 'error' : 'info');
+            
+            // Update progress if available
+            if (data.progress !== undefined) {
+                document.getElementById('progressFill').style.width = data.progress + '%';
+                document.getElementById('progressPercent').textContent = Math.round(data.progress) + '%';
+                document.getElementById('progressPercentText').textContent = Math.round(data.progress) + '%';
+            }
+            
+            // Update total jobs if available
+            if (data.total_jobs !== undefined) {
+                document.getElementById('totalJobs').textContent = data.total_jobs;
+            }
+        });
+
+        socket.on('job_progress', function(data) {
+            console.log('Job progress:', data);
+            // Update current job
+            document.getElementById('currentJob').classList.remove('hidden');
+            document.getElementById('currentJobText').textContent = `${data.job_title} at ${data.company}`;
+            
+            // Update progress
+            document.getElementById('completedJobs').textContent = data.current - 1; // Current is 1-based
+            document.getElementById('totalJobs').textContent = data.total;
+            document.getElementById('progressPercent').textContent = Math.round(data.progress) + '%';
+            document.getElementById('progressPercentText').textContent = Math.round(data.progress) + '%';
+            document.getElementById('progressFill').style.width = data.progress + '%';
+            
+            updateChart();
+        });
+
+        socket.on('job_extracted', function(data) {
+            console.log('Job extracted:', data);
+            addJobCard(data.job, data.index);
+            
+            // Update progress
+            document.getElementById('completedJobs').textContent = data.completed || data.index;
+            document.getElementById('totalJobs').textContent = data.total;
+            
+            // Update progress bar
+            const progressPercent = ((data.completed || data.index) / data.total) * 100;
+            document.getElementById('progressFill').style.width = progressPercent + '%';
+            document.getElementById('progressPercent').textContent = Math.round(progressPercent) + '%';
+            document.getElementById('progressPercentText').textContent = Math.round(progressPercent) + '%';
+            
+            // Add log entry
+            const jobTitle = data.job.job_title || data.job.title || data.job.search_info?.title || 'Unknown Job';
+            const company = data.job.company_name || data.job.company || data.job.search_info?.company || 'Unknown Company';
+            addLogEntry(`✅ Extracted: ${jobTitle} at ${company}`, 'success');
+            
+            updateChart();
+        });
+
+        socket.on('job_error', function(data) {
+            document.getElementById('errorCount').textContent = parseInt(document.getElementById('errorCount').textContent) + 1;
+            addLogEntry(`❌ Error extracting: ${data.job.title} - ${data.error}`, 'error');
+            updateChart();
+        });
+
+        socket.on('extraction_complete', function(data) {
+            addLogEntry(`🎉 Extraction completed! Total time: ${Math.round(data.total_time)}s`, 'success');
+            addLogEntry(`📁 Results saved to: ${data.summary.files_created.extraction_folder}`, 'info');
+            
+            // Reset button
+            document.getElementById('btnText').classList.remove('hidden');
+            document.getElementById('btnSpinner').classList.add('hidden');
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('currentJob').classList.add('hidden');
+            
+            stopFileMonitoring();
+        });
+
+        socket.on('extraction_error', function(data) {
+            addLogEntry(`💥 Extraction failed: ${data.error}`, 'error');
+            
+            // Reset button
+            document.getElementById('btnText').classList.remove('hidden');
+            document.getElementById('btnSpinner').classList.add('hidden');
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('currentJob').classList.add('hidden');
+            
+            stopFileMonitoring();
+        });
+
+        socket.on('connected', function(data) {
+            addLogEntry('Connected to WellScraper server', 'success');
+        });
+
+        // Initialize chart on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initChart();
+        });
+        
+        // Clean up monitoring on page unload
+        window.addEventListener('beforeunload', function() {
+            stopFileMonitoring();
+        });
+    </script>
+</body>
+</html>

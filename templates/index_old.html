@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WellScraper - Modern Job Data Mining</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/theme.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family-primary);
+            background: var(--primary-bg);
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(0, 212, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(0, 153, 204, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(0, 212, 255, 0.05) 0%, transparent 50%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .nav {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .nav a {
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            margin: 0 10px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 25px;
+            transition: all 0.3s ease;
+        }
+
+        .nav a:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .control-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            height: fit-content;
+        }
+
+        .control-panel h2 {
+            margin-bottom: 20px;
+            color: #4a5568;
+            font-size: 1.8rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .visualization-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-card h3 {
+            font-size: 2rem;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-card p {
+            color: #718096;
+            font-weight: 500;
+        }
+
+        .progress-container {
+            margin: 20px 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #e2e8f0;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .status-log {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+
+        .log-entry {
+            padding: 8px 0;
+            border-bottom: 1px solid #e2e8f0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-entry.info {
+            color: #2b6cb0;
+        }
+
+        .log-entry.success {
+            color: #2f855a;
+        }
+
+        .log-entry.error {
+            color: #c53030;
+        }
+
+        .log-entry.warning {
+            color: #d69e2e;
+        }
+
+        .results-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-top: 30px;
+        }
+
+        .job-card {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border-left: 4px solid #667eea;
+            transition: transform 0.2s;
+        }
+
+        .job-card:hover {
+            transform: translateX(5px);
+        }
+
+        .job-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .job-company {
+            color: #667eea;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .job-details {
+            display: flex;
+            gap: 20px;
+            color: #718096;
+            font-size: 14px;
+        }
+
+        .current-job {
+            background: #fff5f5;
+            border: 2px solid #fed7d7;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+
+        .current-job h4 {
+            color: #c53030;
+            margin-bottom: 5px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .alert.success {
+            background: #f0fff4;
+            border: 1px solid #9ae6b4;
+            color: #2f855a;
+        }
+
+        .alert.error {
+            background: #fff5f5;
+            border: 1px solid #feb2b2;
+            color: #c53030;
+        }
+
+        .alert.info {
+            background: #ebf8ff;
+            border: 1px solid #90cdf4;
+            color: #2b6cb0;
+        }
+
+        .chart-container {
+            margin: 20px 0;
+            height: 300px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Wellfound Job Scraper</h1>
+            <p>Extract and analyze job postings with real-time visualization</p>
+        </div>
+
+        <div class="nav">
+            <a href="/">🏠 Home</a>
+            <a href="/history">📊 History</a>
+        </div>
+
+        <div class="main-content">
+            <div class="control-panel">
+                <h2>🎯 Extraction Settings</h2>
+                <form id="extractionForm">
+                    <div class="form-group">
+                        <label for="keyword">Job Keyword</label>
+                        <input type="text" id="keyword" name="keyword" placeholder="e.g., software engineer, financial analyst" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="location">Location</label>
+                        <input type="text" id="location" name="location" placeholder="e.g., india, san francisco, remote" required>
+                        <small style="color: #718096; margin-top: 5px; display: block;">
+                            Use "remote" for remote jobs, or specify city/country
+                        </small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="maxJobs">Max Jobs (Optional)</label>
+                        <input type="number" id="maxJobs" name="maxJobs" placeholder="Leave empty for all jobs" min="1" max="100">
+                    </div>
+                    
+                    <button type="submit" class="btn" id="startBtn">
+                        <span id="btnText">🚀 Start Extraction</span>
+                        <span id="btnSpinner" class="hidden"><div class="spinner"></div> Extracting...</span>
+                    </button>
+                </form>
+
+                <div id="currentJob" class="current-job hidden">
+                    <h4>Currently Processing:</h4>
+                    <p id="currentJobText">-</p>
+                </div>
+            </div>
+
+            <div class="visualization-panel">
+                <h2>📊 Live Progress Dashboard</h2>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3 id="totalJobs">0</h3>
+                        <p>Total Jobs Found</p>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <h3 id="completedJobs">0</h3>
+                        <p>Completed</p>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <h3 id="errorCount">0</h3>
+                        <p>Errors</p>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <h3 id="progressPercent">0%</h3>
+                        <p>Progress</p>
+                    </div>
+                </div>
+
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="progressChart"></canvas>
+                </div>
+
+                <div class="status-log">
+                    <h3 style="margin-bottom: 15px;">📋 Activity Log</h3>
+                    <div id="logEntries">
+                        <div class="log-entry info">System ready. Enter job details and click Start Extraction.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="results-section" id="resultsSection">
+            <h2>🎯 Extracted Jobs</h2>
+            <div id="extractedJobs"></div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let progressChart;
+        let extractionData = {
+            completed: [],
+            errors: [],
+            timeLabels: []
+        };
+        let currentExtractionId = null;
+        let monitoringInterval = null;
+        let lastJobCount = 0;
+
+        // Initialize chart
+        function initChart() {
+            const ctx = document.getElementById('progressChart').getContext('2d');
+            progressChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Jobs Completed',
+                        data: [],
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: 'Errors',
+                        data: [],
+                        borderColor: '#e53e3e',
+                        backgroundColor: 'rgba(229, 62, 62, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            stepSize: 1
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Real-time file monitoring
+        function startFileMonitoring(extractionId) {
+            if (monitoringInterval) {
+                clearInterval(monitoringInterval);
+            }
+            
+            currentExtractionId = extractionId;
+            
+            monitoringInterval = setInterval(async () => {
+                try {
+                    // Get progress data
+                    const progressResponse = await fetch(`/extraction_progress/${extractionId}`);
+                    let progressData = null;
+                    if (progressResponse.ok) {
+                        progressData = await progressResponse.json();
+                        updateProgressFromFile(progressData);
+                    }
+                    
+                    // Get jobs data
+                    const jobsResponse = await fetch(`/extraction_jobs/${extractionId}`);
+                    if (jobsResponse.ok) {
+                        const jobsData = await jobsResponse.json();
+                        updateJobsFromFile(jobsData);
+                    }
+                    
+                    // Stop monitoring if extraction is completed
+                    if (progressData && (progressData.status === 'completed' || progressData.status === 'error')) {
+                        stopFileMonitoring();
+                    }
+                } catch (error) {
+                    console.error('Error monitoring files:', error);
+                }
+            }, 1000); // Poll every second
+        }
+        
+        function stopFileMonitoring() {
+            if (monitoringInterval) {
+                clearInterval(monitoringInterval);
+                monitoringInterval = null;
+            }
+            currentExtractionId = null;
+        }
+        
+        function updateProgressFromFile(progressData) {
+            // Update progress stats
+            document.getElementById('totalJobs').textContent = progressData.total_jobs || 0;
+            document.getElementById('completedJobs').textContent = progressData.completed_jobs || 0;
+            document.getElementById('errorCount').textContent = progressData.errors || 0;
+            document.getElementById('progressPercent').textContent = Math.round(progressData.progress_percentage || 0) + '%';
+            document.getElementById('progressFill').style.width = (progressData.progress_percentage || 0) + '%';
+            
+            // Update current job if extracting
+            if (progressData.status === 'extracting_details' && progressData.current_job) {
+                document.getElementById('currentJob').classList.remove('hidden');
+                document.getElementById('currentJobText').textContent = progressData.current_job;
+            } else if (progressData.status === 'completed') {
+                document.getElementById('currentJob').classList.add('hidden');
+                // Reset button state
+                document.getElementById('btnText').classList.remove('hidden');
+                document.getElementById('btnSpinner').classList.add('hidden');
+                document.getElementById('startBtn').disabled = false;
+                addLogEntry('🎉 Extraction completed!', 'success');
+            }
+        }
+        
+        function updateJobsFromFile(jobsData) {
+            if (!jobsData || !jobsData.jobs) return;
+            
+            const jobs = jobsData.jobs;
+            const currentJobCount = jobs.length;
+            
+            // Only add new jobs to avoid duplicates
+            if (currentJobCount > lastJobCount) {
+                const newJobs = jobs.slice(lastJobCount);
+                newJobs.forEach((job, index) => {
+                    addJobCard(job, lastJobCount + index + 1);
+                });
+                lastJobCount = currentJobCount;
+                updateChart();
+            }
+        }
+
+        // Update chart
+        function updateChart() {
+            const now = new Date().toLocaleTimeString();
+            progressChart.data.labels.push(now);
+            progressChart.data.datasets[0].data.push(parseInt(document.getElementById('completedJobs').textContent));
+            progressChart.data.datasets[1].data.push(parseInt(document.getElementById('errorCount').textContent));
+            
+            // Keep only last 20 data points
+            if (progressChart.data.labels.length > 20) {
+                progressChart.data.labels.shift();
+                progressChart.data.datasets[0].data.shift();
+                progressChart.data.datasets[1].data.shift();
+            }
+            
+            progressChart.update();
+        }
+
+        // Add log entry
+        function addLogEntry(message, type = 'info') {
+            const logEntries = document.getElementById('logEntries');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logEntries.appendChild(entry);
+            logEntries.scrollTop = logEntries.scrollHeight;
+        }
+
+        // Add extracted job card
+        function addJobCard(job, index) {
+            const jobsContainer = document.getElementById('extractedJobs');
+            const jobCard = document.createElement('div');
+            jobCard.className = 'job-card fade-in';
+            
+            // Handle both detailed job structure and search results structure
+            let company = 'Unknown Company';
+            if (job.company_name) {
+                company = job.company_name;
+            } else if (job.company) {
+                if (typeof job.company === 'string') {
+                    company = job.company;
+                } else if (typeof job.company === 'object' && job.company.name) {
+                    company = job.company.name;
+                }
+            } else if (job.search_info?.company) {
+                company = job.search_info.company;
+            }
+            
+            const title = job.job_title || job.title || job.search_info?.title || 'Unknown Position';
+            const location = job.location || job.search_info?.location || 'Unknown Location';
+            const employmentType = job.job_type || job.employment_type || job.search_info?.type || 'Unknown Type';
+            const salary = job.salary_range || job.salary || 'Not specified';
+            const experience = job.experience_level || job.experience || 'Not specified';
+            
+            jobCard.innerHTML = `
+                <div class="job-title">${title}</div>
+                <div class="job-company">🏢 ${company}</div>
+                <div class="job-details">
+                    <span>📍 ${location}</span>
+                    <span>💼 ${employmentType}</span>
+                    <span>� ${salary}</span>
+                    <span>📈 ${experience}</span>
+                    ${job.source_url ? `<span>🔗 <a href="${job.source_url}" target="_blank">View Job</a></span>` : ''}
+                </div>
+            `;
+            
+            jobsContainer.appendChild(jobCard);
+            
+            // Scroll to bottom to show latest job
+            jobsContainer.scrollTop = jobsContainer.scrollHeight;
+        }
+
+        // Form submission
+        document.getElementById('extractionForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const keyword = document.getElementById('keyword').value;
+            const location = document.getElementById('location').value;
+            const maxJobs = document.getElementById('maxJobs').value || null;
+            
+            // Reset UI
+            document.getElementById('extractedJobs').innerHTML = '';
+            document.getElementById('totalJobs').textContent = '0';
+            document.getElementById('completedJobs').textContent = '0';
+            document.getElementById('errorCount').textContent = '0';
+            document.getElementById('progressPercent').textContent = '0%';
+            document.getElementById('progressFill').style.width = '0%';
+            lastJobCount = 0;
+            
+            // Stop any existing monitoring
+            stopFileMonitoring();
+            
+            // Update button state
+            document.getElementById('btnText').classList.add('hidden');
+            document.getElementById('btnSpinner').classList.remove('hidden');
+            document.getElementById('startBtn').disabled = true;
+            
+            // Start extraction
+            fetch('/start_extraction', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    keyword: keyword,
+                    location: location,
+                    max_jobs: maxJobs ? parseInt(maxJobs) : null
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    addLogEntry(data.error, 'error');
+                    // Reset button
+                    document.getElementById('btnText').classList.remove('hidden');
+                    document.getElementById('btnSpinner').classList.add('hidden');
+                    document.getElementById('startBtn').disabled = false;
+                } else {
+                    addLogEntry('Extraction started successfully!', 'success');
+                    addLogEntry(`Monitoring extraction: ${data.extraction_id}`, 'info');
+                    
+                    // Start real-time file monitoring
+                    if (data.extraction_id) {
+                        startFileMonitoring(data.extraction_id);
+                    }
+                }
+            })
+            .catch(error => {
+                addLogEntry('Failed to start extraction: ' + error, 'error');
+                // Reset button
+                document.getElementById('btnText').classList.remove('hidden');
+                document.getElementById('btnSpinner').classList.add('hidden');
+                document.getElementById('startBtn').disabled = false;
+            });
+        });
+
+        // Socket event handlers
+        socket.on('status_update', function(data) {
+            console.log('Status update:', data);
+            addLogEntry(data.message, data.type === 'error' ? 'error' : 'info');
+            
+            // Update progress if available
+            if (data.progress !== undefined) {
+                document.getElementById('progressPercent').textContent = Math.round(data.progress) + '%';
+                document.getElementById('progressFill').style.width = data.progress + '%';
+            }
+            
+            // Update total jobs if available
+            if (data.total_jobs !== undefined) {
+                document.getElementById('totalJobs').textContent = data.total_jobs;
+            }
+        });
+
+        socket.on('job_progress', function(data) {
+            console.log('Job progress:', data);
+            // Update current job
+            document.getElementById('currentJob').classList.remove('hidden');
+            document.getElementById('currentJobText').textContent = `${data.job_title} at ${data.company}`;
+            
+            // Update progress
+            document.getElementById('completedJobs').textContent = data.current - 1; // Current is 1-based
+            document.getElementById('totalJobs').textContent = data.total;
+            document.getElementById('progressPercent').textContent = Math.round(data.progress) + '%';
+            document.getElementById('progressFill').style.width = data.progress + '%';
+            
+            updateChart();
+        });
+
+        socket.on('job_extracted', function(data) {
+            console.log('Job extracted:', data);
+            addJobCard(data.job, data.index);
+            
+            // Update progress
+            document.getElementById('completedJobs').textContent = data.completed || data.index;
+            document.getElementById('totalJobs').textContent = data.total;
+            
+            // Update progress bar
+            const progressPercent = ((data.completed || data.index) / data.total) * 100;
+            document.getElementById('progressBar').style.width = progressPercent + '%';
+            
+            // Add log entry
+            const jobTitle = data.job.job_title || data.job.title || data.job.search_info?.title || 'Unknown Job';
+            const company = data.job.company_name || data.job.company || data.job.search_info?.company || 'Unknown Company';
+            addLogEntry(`✅ Extracted: ${jobTitle} at ${company}`, 'success');
+            
+            updateChart();
+        });
+
+        socket.on('job_error', function(data) {
+            document.getElementById('errorCount').textContent = parseInt(document.getElementById('errorCount').textContent) + 1;
+            addLogEntry(`❌ Error extracting: ${data.job.title} - ${data.error}`, 'error');
+            updateChart();
+        });
+
+        socket.on('extraction_complete', function(data) {
+            addLogEntry(`🎉 Extraction completed! Total time: ${Math.round(data.total_time)}s`, 'success');
+            addLogEntry(`📁 Results saved to: ${data.summary.files_created.extraction_folder}`, 'info');
+            
+            // Reset button
+            document.getElementById('btnText').classList.remove('hidden');
+            document.getElementById('btnSpinner').classList.add('hidden');
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('currentJob').classList.add('hidden');
+        });
+
+        socket.on('extraction_error', function(data) {
+            addLogEntry(`💥 Extraction failed: ${data.error}`, 'error');
+            
+            // Reset button
+            document.getElementById('btnText').classList.remove('hidden');
+            document.getElementById('btnSpinner').classList.add('hidden');
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('currentJob').classList.add('hidden');
+        });
+
+        socket.on('connected', function(data) {
+            addLogEntry('Connected to scraper server', 'success');
+        });
+
+        // Initialize chart on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initChart();
+        });
+        
+        // Clean up monitoring on page unload
+        window.addEventListener('beforeunload', function() {
+            stopFileMonitoring();
+        });
+    </script>
+</body>
+</html>
