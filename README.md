@@ -7,7 +7,8 @@
 
 > **A powerful, user-friendly job scraper for Wellfound (formerly AngelList) with a beautiful web interface, real-time extraction, and comprehensive job data management.**
 
-![WellScraper Demo](https://via.placeholder.com/800x400/0A0E1A/00D4FF?text=WellScraper+%F0%9F%9A%80+Modern+Job+Intelligence)
+![WellScraper Dashboard](https://github.com/user-attachments/assets/95880c8e-c14d-4f26-8d59-370570f55583)
+
 
 ## ✨ Features
 
@@ -34,17 +35,6 @@
 - **Extensive logging**: Debug information and extraction tracking
 - **Configuration**: Easy customization of scraping parameters
 - **Documentation**: Comprehensive guides and examples
-
-## 🎥 Demo
-
-### Main Dashboard - WellScraper Interface
-![Modern Dashboard](https://via.placeholder.com/600x400/0A0E1A/00D4FF?text=Glassmorphic+Dashboard+with+Animations)
-
-### Job History with Data Visualization
-![Enhanced History](https://via.placeholder.com/600x400/1A1F2E/0099CC?text=Interactive+Results+Management)
-
-### Real-time Job Extraction View
-![Live Extraction](https://via.placeholder.com/600x400/0A0E1A/00D4FF?text=Animated+Job+Cards+%26+Progress)
 
 ## 🚀 Quick Start
 
